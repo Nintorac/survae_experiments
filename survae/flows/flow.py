@@ -4,6 +4,23 @@ from collections.abc import Iterable
 from survae.distributions import Distribution
 from survae.transforms import Transform
 
+REPORT = False
+def info(module, enabled=False):
+
+    def print_info(x):
+        
+        print(type(module))
+        print(x.shape)
+        x = result = module(x)
+        if isinstance(result, tuple):
+            x = result[0]
+
+        print(x.shape)
+
+        return result
+    if enabled:
+        return print_info
+    return module
 
 class Flow(Distribution):
     """
@@ -26,7 +43,7 @@ class Flow(Distribution):
     def log_prob(self, x):
         log_prob = torch.zeros(x.shape[0], device=x.device)
         for transform in self.transforms:
-            x, ldj = transform(x)
+            x, ldj = info(transform, REPORT)(x)
             log_prob += ldj
         log_prob += self.base_dist.log_prob(x)
         return log_prob
@@ -34,7 +51,8 @@ class Flow(Distribution):
     def sample(self, num_samples):
         z = self.base_dist.sample(num_samples)
         for transform in reversed(self.transforms):
-            z = transform.inverse(z)
+            z = info(transform.inverse, REPORT)(z)
+
         return z
 
     def sample_with_log_prob(self, num_samples):
